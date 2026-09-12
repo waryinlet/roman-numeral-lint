@@ -1,0 +1,18 @@
+[project]
+name = "numerus"
+version = "0.1.0"
+description = "Strict Roman numeral validation and conversion with precise error messages"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "waryinlet" }]
+
+[project.scripts]
+numerus = "numerus.cli:main"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
