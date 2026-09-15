@@ -1,4 +1,5 @@
 import io
+import json
 import os
 import tempfile
 import unittest
@@ -109,6 +110,55 @@ class FileTest(unittest.TestCase):
             self.assertIn(f"{path}:3:1: error:", err.getvalue())
         finally:
             os.unlink(path)
+
+
+class QuietFlagTest(unittest.TestCase):
+    def test_quiet_suppresses_successful_output(self):
+        out, err = io.StringIO(), io.StringIO()
+        with redirect_stdout(out), redirect_stderr(err):
+            exit_code = main(["--quiet", "MCMXCIV", "IIII"])
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(out.getvalue(), "")
+        self.assertIn("error:", err.getvalue())
+
+    def test_quiet_still_exits_zero_when_all_valid(self):
+        out = io.StringIO()
+        with redirect_stdout(out):
+            exit_code = main(["--quiet", "MCMXCIV"])
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(out.getvalue(), "")
+
+
+class JsonFormatTest(unittest.TestCase):
+    def test_json_success(self):
+        out = io.StringIO()
+        with redirect_stdout(out):
+            exit_code = main(["--format", "json", "MCMXCIV"])
+        self.assertEqual(exit_code, 0)
+        payload = json.loads(out.getvalue())
+        self.assertEqual(payload, {
+            "source": "<argv>", "line": 1, "input": "MCMXCIV", "ok": True, "output": "1994",
+        })
+
+    def test_json_error_goes_to_stdout_not_stderr(self):
+        out, err = io.StringIO(), io.StringIO()
+        with redirect_stdout(out), redirect_stderr(err):
+            exit_code = main(["--format", "json", "IIII"])
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(err.getvalue(), "")
+        payload = json.loads(out.getvalue())
+        self.assertFalse(payload["ok"])
+        self.assertEqual(payload["error"]["column"], 4)
+        self.assertIn("repeated 4 times", payload["error"]["message"])
+
+    def test_json_and_quiet_only_emits_errors(self):
+        out = io.StringIO()
+        with redirect_stdout(out):
+            exit_code = main(["--format", "json", "--quiet", "MCMXCIV", "IIII"])
+        self.assertEqual(exit_code, 1)
+        lines = [json.loads(line) for line in out.getvalue().splitlines()]
+        self.assertEqual(len(lines), 1)
+        self.assertFalse(lines[0]["ok"])
 
 
 if __name__ == "__main__":

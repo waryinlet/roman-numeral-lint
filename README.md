@@ -70,6 +70,30 @@ Lines that fail to convert are reported to stderr and skipped; valid
 lines still print their results, and the process exits non-zero if any
 line failed.
 
+Use `-q`/`--quiet` to check a file without printing every successful
+conversion, useful when you only care whether something is wrong:
+
+```
+$ numerus -q -f numerals.txt
+numerals.txt:2:1: error: 'I' repeated 4 times in a row; at most 3 are allowed
+    IIII
+    ^
+numerals.txt:3:1: error: 'x' is lowercase; Roman numerals use only uppercase I V X L C D M
+    xiv
+    ^
+```
+
+Use `--format json` for machine-readable output, one JSON object per
+input line on stdout, whether it succeeded or failed:
+
+```
+$ numerus --format json MCMXCIV IIII
+{"source": "<argv>", "line": 1, "input": "MCMXCIV", "ok": true, "output": "1994"}
+{"source": "<argv>", "line": 2, "input": "IIII", "ok": false, "error": {"message": "'I' repeated 4 times in a row; at most 3 are allowed", "column": 4}}
+```
+
+`--quiet` and `--format json` combine: only failed entries are printed.
+
 ## Library use
 
 ```python
