@@ -129,6 +129,37 @@ class QuietFlagTest(unittest.TestCase):
         self.assertEqual(out.getvalue(), "")
 
 
+class VinculumFlagTest(unittest.TestCase):
+    def test_decode_overlined_numeral(self):
+        out = io.StringIO()
+        with redirect_stdout(out):
+            exit_code = main(["--vinculum", "V̅XLII"])
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(out.getvalue(), "5042\n")
+
+    def test_encode_above_3999_requires_flag(self):
+        out, err = io.StringIO(), io.StringIO()
+        with redirect_stdout(out), redirect_stderr(err):
+            exit_code = main(["-e", "5042"])
+        self.assertEqual(exit_code, 1)
+        self.assertIn("out of range", err.getvalue())
+
+    def test_encode_above_3999_with_flag(self):
+        out = io.StringIO()
+        with redirect_stdout(out):
+            exit_code = main(["--vinculum", "-e", "5042"])
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(out.getvalue(), "V̅XLII\n")
+
+    def test_overlined_numeral_rejected_without_flag(self):
+        out, err = io.StringIO(), io.StringIO()
+        with redirect_stdout(out), redirect_stderr(err):
+            exit_code = main(["V̅XLII"])
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(out.getvalue(), "")
+        self.assertIn("combining overline", err.getvalue())
+
+
 class JsonFormatTest(unittest.TestCase):
     def test_json_success(self):
         out = io.StringIO()

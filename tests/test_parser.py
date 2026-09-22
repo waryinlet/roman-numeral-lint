@@ -122,6 +122,77 @@ class ErrorFormattingTest(unittest.TestCase):
         self.assertTrue(formatted.startswith("1:1: error:"))
 
 
+class VinculumToIntTest(unittest.TestCase):
+    def test_overlined_letter_multiplies_by_thousand(self):
+        self.assertEqual(to_int("V̅", vinculum=True), 5000)
+        self.assertEqual(to_int("X̅", vinculum=True), 10000)
+        self.assertEqual(to_int("M̅", vinculum=True), 1000000)
+
+    def test_overlined_run_plus_remainder(self):
+        self.assertEqual(to_int("V̅XLII", vinculum=True), 5042)
+        self.assertEqual(to_int("I̅V̅CMXCIX", vinculum=True), 4999)
+
+    def test_overlined_run_of_several_letters(self):
+        # X overlined, III overlined: (10 + 3) * 1000 = 13000
+        self.assertEqual(to_int("X̅I̅I̅I̅", vinculum=True), 13000)
+
+    def test_plain_numeral_unaffected_by_vinculum_flag(self):
+        self.assertEqual(to_int("MCMXCIV", vinculum=True), 1994)
+
+    def test_overline_rejected_without_flag(self):
+        with self.assertRaises(RomanNumeralError) as ctx:
+            to_int("V̅")
+        self.assertIn("combining overline", ctx.exception.message)
+        self.assertEqual(ctx.exception.column, 2)
+
+    def test_error_inside_overlined_run_maps_back_to_original_column(self):
+        # "VV̅" overlined run is "VV", which repeats the five-symbol;
+        # that error is at stripped column 2, i.e. original column 3.
+        with self.assertRaises(RomanNumeralError) as ctx:
+            to_int("V̅V̅", vinculum=True)
+        self.assertIn("cannot repeat", ctx.exception.message)
+        self.assertEqual(ctx.exception.column, 3)
+
+    def test_error_in_remainder_maps_back_to_original_column(self):
+        with self.assertRaises(RomanNumeralError) as ctx:
+            to_int("V̅IIII", vinculum=True)
+        self.assertIn("repeated 4 times", ctx.exception.message)
+        self.assertEqual(ctx.exception.column, 6)
+
+    def test_stray_overline_without_pairing_is_rejected(self):
+        with self.assertRaises(RomanNumeralError) as ctx:
+            to_int("XV̅I", vinculum=True)
+        self.assertIn("combining overline", ctx.exception.message)
+
+
+class VinculumToRomanTest(unittest.TestCase):
+    def test_values_up_to_3999_are_unchanged(self):
+        self.assertEqual(to_roman(3999, vinculum=True), to_roman(3999))
+        self.assertEqual(to_roman(42, vinculum=True), "XLII")
+
+    def test_exact_thousands(self):
+        self.assertEqual(to_roman(5000, vinculum=True), "V̅")
+        self.assertEqual(to_roman(4000, vinculum=True), "I̅V̅")
+
+    def test_thousands_with_remainder(self):
+        self.assertEqual(to_roman(5042, vinculum=True), "V̅XLII")
+
+    def test_rejects_without_flag_above_3999(self):
+        with self.assertRaises(ValueError):
+            to_roman(4000)
+
+    def test_rejects_out_of_range_even_with_flag(self):
+        with self.assertRaises(ValueError):
+            to_roman(4000000, vinculum=True)
+        with self.assertRaises(ValueError):
+            to_roman(0, vinculum=True)
+
+    def test_round_trip(self):
+        for value in [1000, 3999, 4000, 5042, 13000, 999999, 3999999]:
+            numeral = to_roman(value, vinculum=True)
+            self.assertEqual(to_int(numeral, vinculum=True), value)
+
+
 class ToRomanTest(unittest.TestCase):
     def test_known_values(self):
         cases = {

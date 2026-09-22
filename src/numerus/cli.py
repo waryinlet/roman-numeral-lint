@@ -44,10 +44,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--format", choices=["text", "json"], default="text",
         help="output format for results and errors (default: text)",
     )
+    parser.add_argument(
+        "--vinculum", action="store_true",
+        help="allow combining-overline vinculum notation for values above 3999 (opt-in extension)",
+    )
     return parser
 
 
-def _convert_line(text: str, *, encode: bool, line: int, source: str) -> str:
+def _convert_line(text: str, *, encode: bool, line: int, source: str, vinculum: bool) -> str:
     if encode:
         try:
             number = int(text)
@@ -56,10 +60,10 @@ def _convert_line(text: str, *, encode: bool, line: int, source: str) -> str:
                 f"'{text}' is not an integer", line=line, column=1, text=text, source=source
             ) from None
         try:
-            return to_roman(number)
+            return to_roman(number, vinculum=vinculum)
         except ValueError as exc:
             raise RomanNumeralError(str(exc), line=line, column=1, text=text, source=source) from None
-    return str(to_int(text, line=line, source=source))
+    return str(to_int(text, line=line, source=source, vinculum=vinculum))
 
 
 def _emit_success(result: str, *, source: str, line: int, text: str, fmt: str, quiet: bool) -> None:
@@ -100,7 +104,9 @@ def main(argv=None) -> int:
         if not stripped:
             continue
         try:
-            result = _convert_line(stripped, encode=args.encode, line=lineno, source=source)
+            result = _convert_line(
+                stripped, encode=args.encode, line=lineno, source=source, vinculum=args.vinculum
+            )
         except RomanNumeralError as exc:
             exit_code = 1
             _emit_error(exc, fmt=args.format)

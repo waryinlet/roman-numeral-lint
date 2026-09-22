@@ -110,9 +110,26 @@ except RomanNumeralError as exc:
 
 ## Range
 
-Supports 1 to 3999. Roman numerals have no standard notation above that
-without adding diacritic marks (vinculum, apostrophus) that this tool
-does not attempt to parse.
+Supports 1 to 3999 by default. Roman numerals have no single standard
+notation above that; the closest is the vinculum, a bar drawn over a
+numeral to multiply it by 1000.
+
+## Vinculum notation
+
+Pass `--vinculum` to opt into vinculum notation for values from 4000 up
+to 3999999. Since this tool works with plain text rather than typeset
+numerals, the bar is spelled out as a combining overline (Unicode
+U+0305) after each letter it covers:
+
+```
+$ numerus --vinculum V̄XLII
+5042
+$ numerus --vinculum -e 5042
+V̄XLII
+```
+
+Without `--vinculum`, the overline character is rejected like any other
+symbol outside I V X L C D M, so plain conversions are unaffected.
 
 ## License
 
